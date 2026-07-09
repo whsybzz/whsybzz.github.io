@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>床车 SleepCar · 车型查询与对比</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --line:#e8eaed; --text:#1f2329;
+    --sub:#8a8f99; --accent:#2563eb; --accent-soft:#eaf1ff;
+    --warn:#ff6a00; --good:#0a9a4a; --good-soft:#e8f7ee;
+    --chip-bg:#f0f2f5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;
+    background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;
+    padding-bottom:64px}
+  /* nav */
+  .nav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;padding:0 20px;height:56px}
+  .logo{font-weight:800;font-size:18px;color:var(--accent);margin-right:12px}
+  .logo span{color:var(--text)}
+  .tab{padding:8px 16px;border-radius:8px;cursor:pointer;color:var(--sub);font-weight:600;font-size:15px}
+  .tab.active{background:var(--accent-soft);color:var(--accent)}
+  .spacer{flex:1}
+  .stat{color:var(--sub);font-size:13px}
+
+  /* layout */
+  .wrap{max-width:1100px;margin:0 auto;padding:16px 20px 40px}
+  /* toolbar */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+  .search{flex:1;min-width:200px;position:relative}
+  .search input{width:100%;height:38px;border:1px solid var(--line);border-radius:9px;
+    padding:0 13px 0 36px;font-size:14px;background:#fff;outline:none}
+  .search input:focus{border-color:var(--accent)}
+  .search svg{position:absolute;left:11px;top:11px}
+  select{height:38px;border:1px solid var(--line);border-radius:9px;padding:0 11px;
+    background:#fff;font-size:14px;color:var(--text);outline:none;cursor:pointer}
+
+  /* ====== PILL 首页 ====== */
+  /* 品牌分组标题 — 全宽条 */
+  .brand-bar{display:block;width:100%;padding:10px 18px 6px;font-size:15px;
+    font-weight:800;color:var(--accent);
+    background:linear-gradient(90deg,var(--accent-soft) 0%,#f0f4ff 70%,transparent 100%);
+    border-top:2px solid var(--line);border-bottom:1px solid var(--line);
+    margin-top:12px;margin-bottom:8px}
+  .brand-bar:first-child{margin-top:0}
+
+  /* 药丸标签网格 */
+  .pill-grid{display:flex;flex-wrap:wrap;gap:10px;padding:0 4px 18px}
+  .pill{display:inline-flex;align-items:center;justify-content:center;border:1.5px solid var(--line);
+    border-radius:22px;padding:8px 18px;font-size:14px;font-weight:600;
+    background:#fff;color:var(--text);cursor:pointer;transition:.15s;
+    user-select:none;line-height:1.3}
+  .pill:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 2px 10px rgba(37,99,235,.08)}
+  .pill.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* detail modal */
+  .mask{position:fixed;inset:0;background:rgba(15,20,30,.45);z-index:50;display:none;
+    align-items:center;justify-content:center;padding:20px}
+  .mask.show{display:flex}
+  .modal{background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:86vh;overflow:auto;position:relative}
+  .modal h3{font-size:20px;padding:18px 20px 6px}
+  .modal .mb{color:var(--sub);font-size:13px;padding:0 20px 14px;border-bottom:1px solid var(--line)}
+  .dl{padding:8px 20px 20px}
+  .dl .row{display:flex;padding:11px 0;border-bottom:1px dashed var(--line)}
+  .dl .row:last-child{border-bottom:none}
+  .dl .k{width:150px;color:var(--sub);flex-shrink:0;font-size:13px}
+  .dl .v{flex:1;font-weight:600;word-break:break-word}
+  .close{position:absolute;top:14px;right:16px;font-size:22px;color:var(--sub);cursor:pointer}
+
+  /* ====== COMPARE PAGE ====== */
+  .cmp-hint{text-align:center;color:var(--sub);font-size:13px;padding:10px 0 16px}
+  .cmp-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .cpill{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);
+    border-radius:20px;padding:6px 14px 6px 12px;font-size:14px;font-weight:700}
+  .cpill b{cursor:pointer;color:var(--sub);font-weight:800;font-size:16px;line-height:1}
+  .cpill b:hover{color:#cf1322}
+  .cmp-toggle{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--sub);
+    cursor:pointer;margin-left:auto}
+
+  .ctable-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+  table.ctable{border-collapse:collapse;min-width:100%}
+  table.ctable th,table.ctable td{border:1px solid var(--line);padding:11px 13px;
+    vertical-align:middle;min-width:160px;max-width:240px;
+    word-break:break-word;overflow-wrap:break-word;white-space:normal;line-height:1.55}
+  table.ctable td{text-align:center}
+  table.ctable thead th{position:sticky;top:0;background:#fafbfc;z-index:5;min-width:170px}
+  table.ctable tbody th{position:sticky;left:0;background:#fafbfc;z-index:4;text-align:left;
+    color:var(--sub);font-weight:600;min-width:128px;max-width:200px}
+  table.ctable thead th .cname{font-size:15px;font-weight:700;word-break:break-word}
+  table.ctable thead th .cbrand{font-size:12px;color:var(--sub);font-weight:500;margin-top:2px}
+  table.ctable td.best{background:var(--good-soft);color:var(--good);font-weight:700}
+  table.ctable td.diff{background:#fff8ef}
+  .empty{text-align:center;color:var(--sub);padding:60px 20px}
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div class="logo">床车<span>SleepCar</span></div>
+    <div class="tab active" data-view="query">单车查询</div>
+    <div class="tab" data-view="compare">多车对比</div>
+    <div class="spacer"></div>
+    <div class="stat" id="stat"></div>
+  </div>
+
+  <div class="wrap">
+    <!-- 单车查询 — pill 标签 -->
+    <section id="view-query">
+      <div class="toolbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a8f99" stroke-width="2">
+            <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="q" placeholder="搜索车型或品牌…" />
+        </div>
+        <select id="fBrand"><option value="">全部品牌</option></select>
+        <select id="fStar"><option value="">全部适睡推荐</option></select>
+      </div>
+      <div id="grid"></div>
+    </section>
+
+    <!-- 多车对比 -->
+    <section id="view-compare" style="display:none">
+      <div class="cmp-hint" id="cmpHint"></div>
+      <div class="cmp-pills" id="cmpPills"></div>
+      <label class="cmp-toggle" style="display:block;margin-bottom:14px">
+        <input type="checkbox" id="diffOnly" /> 仅看差异
+      </label>
+      <div id="cmpBody"></div>
+    </section>
+  </div>
+
+  <!-- 底部固定已选栏（恒定可见） -->
+  <div id="selBar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;
+    align-items:center;gap:10px;padding:10px 20px 12px;
+    background:#fff;border-top:1.5px solid var(--accent);box-shadow:0 -3px 14px rgba(0,0,0,.08)">
+    <span style="font-weight:700;color:var(--accent);white-space:nowrap;font-size:13px">
+      已选 <span class="sel-count" style="font-size:16px">0</span> 款
+    </span>
+    <button id="goCmpBtn" style="flex:1;height:40px;border:none;border-radius:9px;
+      background:var(--accent);color:#fff;font-weight:800;cursor:pointer;font-size:15px;
+      letter-spacing:.5px"
+      disabled>开始对比</button>
+    <button id="clearSelBtn" style="height:32px;border:1px solid var(--line);border-radius:7px;
+      background:#fff;color:var(--sub);cursor:pointer;font-size:12px;padding:0 12px;
+      font-weight:600">清空</button>
+  </div>
+
+  <!-- 详情弹窗 -->
+  <div class="mask" id="mask">
+    <div class="modal">
+      <span class="close" id="closeModal">×</span>
+      <h3 id="mName"></h3>
+      <div class="mb" id="mBrand"></div>
+      <div class="dl" id="mDl"></div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+  (function(){
+    const DATA = window.SLEEP_CAR_DATA || [];
+    const FIELDS = window.SLEEP_CAR_FIELDS || [];
+    const compare = [];
+
+    function numOf(v){
+      if(v==null) return null;
+      const m=String(v).match(/-?\d+(\.\d+)?/);
+      return m?parseFloat(m[0]):null;
+    }
+    function starRank(v){
+      if(v==null) return -1;
+      const m=String(v).match(/(\d+)\s*星/);
+      return m?parseInt(m[1]):0;
+    }
+
+    // 排序：按品牌分组
+    const brands=[...new Set(DATA.map(d=>d["品牌"]).filter(Boolean))].sort();
+    const stars=[...new Set(DATA.map(d=>d["适睡推荐"]).filter(Boolean))];
+    let sortedData=[...DATA].sort((a,b)=>{
+      const ba=a["品牌"]||"",bb=b["品牌"]||"";
+      if(ba!==bb) return ba.localeCompare(bb,"zh");
+      return a["车型"].localeCompare(b["车型"],"zh");
+    });
+
+    brands.forEach(b=>{const o=document.createElement("option");o.value=b;o.textContent=b;fBrand.appendChild(o);});
+    stars.forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;fStar.appendChild(o);});
+    document.getElementById("stat").textContent=`共 ${DATA.length} 款车型 · ${brands.length} 个品牌`;
+
+    // ====== Pill 渲染（按品牌分组） ======
+    function renderGrid(){
+      const q=document.getElementById("q").value.trim().toLowerCase();
+      const fb=document.getElementById("fBrand").value;
+      const fs=document.getElementById("fStar").value;
+
+      let list=sortedData.filter(d=>{
+        if(q && !(d["车型"].toLowerCase().includes(q)||(d["品牌"]||"").toLowerCase().includes(q))) return false;
+        if(fb && d["品牌"]!==fb) return false;
+        if(fs && d["适睡推荐"]!==fs) return false;
+        return true;
+      });
+
+      const grid=document.getElementById("grid");
+      grid.innerHTML="";
+      if(!list.length){grid.innerHTML='<div class="empty">没有匹配的车型</div>';return;}
+
+      // 按品牌分组渲染（注意：每次换品牌必须先关闭上一个 pill-grid）
+      let prevBrand=null;
+      let html="";
+      let first=true;
+      list.forEach((d,idx)=>{
+        const br=d["品牌"]||"其他";
+        if(br!==prevBrand){
+          if(!first) html+="</div>"; // 关闭上一组 pill-grid
+          html+=`<div class="brand-bar">${br}</div><div class="pill-grid">`;
+          prevBrand=br;
+          first=false;
+        }
+        const inCmp=compare.includes(d["车型"]);
+        html+=`<div class="pill${inCmp?' sel':''}" data-n="${d["车型"]}">${d["车型"]}</div>`;
+      });
+      if(!first) html+="</div>"; // 关闭最后一组 pill-grid
+      grid.innerHTML=html;
+
+      // 绑事件：点击 = 加入/移除对比 + 查看详情（右键或长按？直接点就是加入）
+      grid.querySelectorAll('.pill').forEach(el=>{
+        el.onclick=()=>toggleCmp(el.dataset.n);
+      });
+    }
+
+    // 详情弹窗
+    function openDetail(d){
+      document.getElementById("mName").textContent=d["车型"];
+      document.getElementById("mBrand").textContent=d["品牌"]||"其他品牌";
+      const dl=document.getElementById("mDl");dl.innerHTML="";
+      FIELDS.forEach(f=>{
+        const v=d[f];
+        const row=document.createElement("div");row.className="row";
+        row.innerHTML=`<div class="k">${f}</div><div class="v">${v==null||v===""?"—":v}</div>`;
+        dl.appendChild(row);
+      });
+      document.getElementById("mask").classList.add("show");
+    }
+    document.getElementById("closeModal").onclick=()=>document.getElementById("mask").classList.remove("show");
+    document.getElementById("mask").onclick=e=>{if(e.target.id==="mask")e.target.classList.remove("show");};
+
+    /* ====== 选车栏（查询页顶部，显示已选数量 + 开始对比按钮） ====== */
+    function renderSelBar(){
+      const bar=document.getElementById("selBar");
+      if(!bar)return;
+      if(compare.length===0){bar.style.display="none";return;}
+      bar.style.display="flex";
+      bar.querySelector(".sel-count").textContent=compare.length;
+      document.getElementById("goCmpBtn").disabled=compare.length<2;
+    }
+
+    // ====== 对比逻辑（不再自动跳转） ======
+    function toggleCmp(name){
+      const i=compare.indexOf(name);
+      if(i>=0) compare.splice(i,1);
+      else { compare.push(name); }
+      renderGrid();renderCompare();renderSelBar();
+      // 不再自动跳转——用户手动点"开始对比"
+    }
+    function removeCmp(name){ toggleCmp(name); }
+    function goComparePage(){
+      if(compare.length<2) return;
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      document.querySelector('[data-view="compare"]').classList.add("active");
+      document.getElementById("view-query").style.display="none";
+      document.getElementById("view-compare").style.display="block";
+      document.getElementById("selBar").style.display="none"; // 对比页隐藏底部栏
+      renderCompare();
+    }
+    function backToQuery(){
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      document.querySelector('[data-view="query"]').classList.add("active");
+      document.getElementById("view-compare").style.display="none";
+      document.getElementById("view-query").style.display="block";
+      renderGrid();renderSelBar(); // 返回后恢复底部栏
+    }
+
+    function renderCompare(){
+      // 顶部提示
+      const hint=document.getElementById("cmpHint");
+      if(!compare.length){
+        hint.innerHTML='<span>请至少选择 2 款进行对比。在「单车查询」中点击车名即可加入。</span>';
+      } else {
+        hint.innerHTML='<a id="cmpBackLink" style="color:var(--accent);cursor:pointer;text-decoration:underline;font-size:14px">← 返回查询页可继续添加</a>';
+        document.getElementById("cmpBackLink").onclick=backToQuery;
+      }
+
+      // 已选药丸
+      const cpills=document.getElementById("cmpPills");
+      cpills.innerHTML="";
+      compare.forEach(n=>{
+        const c=document.createElement("div");
+        c.className="cpill";
+        c.innerHTML=`${n}<b data-rm="${n}">×</b>`;
+        c.querySelector("b").onclick=e=>{e.stopPropagation();removeCmp(e.target.dataset.rm);};
+        cpills.appendChild(c);
+      });
+
+      // 参数表
+      const body=document.getElementById("cmpBody");
+      const diffOnly=document.getElementById("diffOnly").checked;
+      if(compare.length<2){body.innerHTML='<div class="empty">请至少选择 2 款车型进行对比。</div>';return;}
+      const cars=compare.map(n=>DATA.find(d=>d["车型"]===n)).filter(Boolean);
+
+      let html='<div class="ctable-wrap"><table class="ctable"><thead><tr><th></th>';
+      cars.forEach(c=>html+=`<th><div class="cname">${c["车型"]}</div><div class="cbrand">${c["品牌"]||""}</div></th>`);
+      html+='</tr></thead><tbody>';
+
+      FIELDS.forEach(f=>{
+        const vals=cars.map(c=>c[f]);
+        const allSame=vals.every((v,i)=>v===vals[0]||(v==null&&vals[0]==null));
+        if(diffOnly&&allSame)return;
+        let bestIdx=-1;
+        if(f==="适睡推荐"){let b=-2;vals.forEach((v,i)=>{const r=starRank(v);if(r>b){b=r;bestIdx=i;}});}
+        else if(["后备箱可睡长度","车身长度","车身宽度","车身高度"].includes(f)){
+          let b=-1;vals.forEach((v,i)=>{const n=numOf(v);if(n!=null&&n>b){b=n;bestIdx=i;}});
+        }else if(f==="后备箱倾斜角"){
+          let b=1e9;vals.forEach((v,i)=>{const n=numOf(v);if(n!=null&&n<b){b=n;bestIdx=i;}});
+        }
+        html+=`<tr><th>${f}</th>`;
+        vals.forEach((v,i)=>{
+          const cls=[];
+          // 排除 "-" 值不被标为最佳
+          if(i===bestIdx && v!==null && v!=="" && String(v).trim()!=="-")cls.push("best");
+          if(!allSame)cls.push("diff");
+          html+=`<td class="${cls.join(' ')}">${v==null||v===""?"—":v}</td>`;
+        });
+        html+='</tr>';
+      });
+      html+='</tbody></table></div>';
+      body.innerHTML=html;
+    }
+
+    // tab 切换
+    document.querySelectorAll(".tab").forEach(t=>{
+      t.onclick=()=>{
+        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+        t.classList.add("active");
+        const v=t.dataset.view;
+        document.getElementById("view-query").style.display=v==="query"?"block":"none";
+        document.getElementById("view-compare").style.display=v==="compare"?"block":"none";
+        document.getElementById("selBar").style.display=(v==="query")?((compare.length>0)?"flex":"none"):"none";
+        if(v==="compare")renderCompare();
+      };
+    });
+
+    document.getElementById("q").oninput=renderGrid;
+    document.getElementById("fBrand").onchange=renderGrid;
+    document.getElementById("fStar").onchange=renderGrid;
+    document.getElementById("diffOnly").onchange=renderCompare;
+
+    // 已选栏按钮
+    document.getElementById("goCmpBtn").onclick=goComparePage;
+    document.getElementById("clearSelBtn").onclick=()=>{
+      compare.splice(0,compare.length);
+      renderGrid();renderCompare();renderSelBar();
+    };
+
+    // init
+    renderGrid();renderCompare();renderSelBar();
+
+    // 暴露给全局 onclick
+    window.backToQuery=backToQuery;
+  })();
+  </script>
+</body>
+</html>
