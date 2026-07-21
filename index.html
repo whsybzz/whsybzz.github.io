@@ -86,6 +86,7 @@
     word-break:break-word;overflow-wrap:break-word;white-space:normal;line-height:1.55}
   table.ctable td{text-align:center}
   table.ctable thead th{position:sticky;top:0;background:#fafbfc;z-index:5;min-width:170px}
+  table.ctable thead th:first-child{position:sticky;left:0;z-index:6;background:#fafbfc}
   table.ctable tbody th{position:sticky;left:0;background:#fafbfc;z-index:4;text-align:left;
     color:var(--sub);font-weight:600;min-width:128px;max-width:200px}
   table.ctable thead th .cname{font-size:15px;font-weight:700;word-break:break-word}
@@ -93,6 +94,25 @@
   table.ctable td.best{background:var(--good-soft);color:var(--good);font-weight:700}
   table.ctable td.diff{background:#fff8ef}
   .empty{text-align:center;color:var(--sub);padding:60px 20px}
+
+  /* ====== 移动端适配 ====== */
+  @media (max-width:640px){
+    .nav{height:auto;min-height:52px;padding:7px 12px;flex-wrap:wrap;row-gap:5px}
+    .logo{font-size:16px;margin-right:6px}
+    .tab{padding:6px 11px;font-size:14px}
+    .spacer{display:none}
+    .stat{order:9;width:100%;text-align:left;font-size:12px;padding-top:1px}
+    .wrap{padding:12px 14px 40px}
+    .toolbar{gap:8px}
+    .search{flex:1 1 100%;min-width:0}
+    select{flex:1;min-width:120px}
+    .brand-bar{padding:10px 14px 6px}
+    .pill-grid{padding:0 2px 16px}
+    .pill{padding:7px 15px;font-size:13px}
+    table.ctable th,table.ctable td{min-width:132px;padding:9px 10px}
+    table.ctable thead th{min-width:150px}
+    table.ctable tbody th{min-width:108px;max-width:160px}
+  }
 </style>
 </head>
 <body>
@@ -370,5 +390,3 @@
   </script>
 </body>
 </html>
-
-<!-- SleepCar deployed via GitHub Pages -->
