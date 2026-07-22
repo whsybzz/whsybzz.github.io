@@ -134,7 +134,7 @@
           <input id="q" placeholder="搜索车型或品牌…" />
         </div>
         <select id="fBrand"><option value="">全部品牌</option></select>
-        <select id="fStar"><option value="">全部适睡推荐</option></select>
+        <select id="fStar"><option value="">适睡推荐</option></select>
       </div>
       <div id="grid"></div>
     </section>
@@ -190,13 +190,17 @@
     }
     function starRank(v){
       if(v==null) return -1;
-      const m=String(v).match(/(\d+)\s*星/);
-      return m?parseInt(m[1]):0;
+      if(String(v).trim()==="-") return -1;
+      const map={"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9};
+      const m=String(v).match(/([0-9一二三四五六七八九])\s*星/);
+      if(!m) return 0;
+      const ch=m[1];
+      return map[ch]!==undefined?map[ch]:parseInt(ch,10);
     }
 
     // 排序：按品牌分组
     const brands=[...new Set(DATA.map(d=>d["品牌"]).filter(Boolean))].sort();
-    const stars=[...new Set(DATA.map(d=>d["适睡推荐"]).filter(Boolean))];
+    const stars=[...new Set(DATA.map(d=>d["适睡推荐"]).filter(Boolean))].sort((a,b)=>starRank(a)-starRank(b));
     let sortedData=[...DATA].sort((a,b)=>{
       const ba=a["品牌"]||"",bb=b["品牌"]||"";
       if(ba!==bb) return ba.localeCompare(bb,"zh");
