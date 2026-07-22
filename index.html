@@ -283,32 +283,56 @@
       // 不再自动跳转——用户手动点"开始对比"
     }
     function removeCmp(name){ toggleCmp(name); }
+    // ====== 视图切换（接入浏览器历史，使返回键回到上一级而非退出） ======
+    function showView(view){
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      document.querySelector('[data-view="'+view+'"]').classList.add("active");
+      document.getElementById("view-query").style.display = view==="query"?"block":"none";
+      document.getElementById("view-compare").style.display = view==="compare"?"block":"none";
+      document.getElementById("selBar").style.display = (view==="query")?((compare.length>0)?"flex":"none"):"none";
+      if(view==="compare") renderCompare();
+    }
+    function navigate(view, push){
+      if(push!==false && history.state && history.state.view===view){ showView(view); return; }
+      showView(view);
+      if(push!==false) history.pushState({view:view, brand:document.getElementById("fBrand").value}, "");
+    }
     function goComparePage(){
       if(compare.length<2) return;
-      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-      document.querySelector('[data-view="compare"]').classList.add("active");
-      document.getElementById("view-query").style.display="none";
-      document.getElementById("view-compare").style.display="block";
-      document.getElementById("selBar").style.display="none"; // 对比页隐藏底部栏
-      renderCompare();
+      navigate("compare", true);
     }
     function backToQuery(){
-      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-      document.querySelector('[data-view="query"]').classList.add("active");
-      document.getElementById("view-compare").style.display="none";
-      document.getElementById("view-query").style.display="block";
-      renderGrid();renderSelBar(); // 返回后恢复底部栏
+      // 用浏览器返回，触发 popstate，与手机/桌面返回键行为一致
+      history.back();
     }
+    // 浏览器/手机返回键 → 回到主界面（全部品牌），最底层时截留、不退出网页
+    window.addEventListener("popstate", function(e){
+      const s = e.state;
+      if(!s || s.view===undefined){
+        // 已到应用内最底层：重新压入主界面并停留，避免直接退出网页
+        history.pushState({view:"query", brand:""}, "");
+        document.getElementById("fBrand").value = ""; // 程序赋值不触发 onchange
+        renderGrid();
+        showView("query");
+        return;
+      }
+      const view = s.view||"query";
+      const brand = s.brand||"";
+      document.getElementById("fBrand").value = brand; // 程序赋值不触发 onchange
+      renderGrid();
+      showView(view);
+    });
 
     function renderCompare(){
-      // 顶部提示
+      // 顶部提示：清空后保留“返回查询页”链接
       const hint=document.getElementById("cmpHint");
+      const backLink='<a id="cmpBackLink" style="color:var(--accent);cursor:pointer;text-decoration:underline;font-size:14px">← 返回查询页可继续添加</a>';
       if(!compare.length){
-        hint.innerHTML='<span>请至少选择 2 款进行对比。在「单车查询」中点击车名即可加入。</span>';
+        hint.innerHTML='<div style="margin-bottom:8px">请至少选择 2 款进行对比。在「单车查询」中点击车名即可加入。</div>'+backLink;
       } else {
-        hint.innerHTML='<a id="cmpBackLink" style="color:var(--accent);cursor:pointer;text-decoration:underline;font-size:14px">← 返回查询页可继续添加</a>';
-        document.getElementById("cmpBackLink").onclick=backToQuery;
+        hint.innerHTML=backLink;
       }
+      document.getElementById("cmpBackLink").onclick=backToQuery;
 
       // 已选药丸
       const cpills=document.getElementById("cmpPills");
@@ -356,21 +380,18 @@
       body.innerHTML=html;
     }
 
-    // tab 切换
+    // tab 切换（接入历史）
     document.querySelectorAll(".tab").forEach(t=>{
       t.onclick=()=>{
-        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-        t.classList.add("active");
         const v=t.dataset.view;
-        document.getElementById("view-query").style.display=v==="query"?"block":"none";
-        document.getElementById("view-compare").style.display=v==="compare"?"block":"none";
-        document.getElementById("selBar").style.display=(v==="query")?((compare.length>0)?"flex":"none"):"none";
-        if(v==="compare")renderCompare();
+        if(history.state && history.state.view===v){ showView(v); return; }
+        navigate(v, true);
       };
     });
 
     document.getElementById("q").oninput=renderGrid;
-    document.getElementById("fBrand").onchange=renderGrid;
+    // 品牌切换仅作局部筛选，不写入历史栈（避免返回键逐个回退品牌）
+    document.getElementById("fBrand").onchange=()=>{ renderGrid(); };
     document.getElementById("fStar").onchange=renderGrid;
     document.getElementById("diffOnly").onchange=renderCompare;
 
@@ -381,11 +402,10 @@
       renderGrid();renderCompare();renderSelBar();
     };
 
-    // init
+    // init：压入主界面记录，底层保留初始记录作缓冲，
+    // 保证“返回键”始终回到主界面而非直接退出网页
+    if(!history.state) history.pushState({view:"query", brand:""}, "");
     renderGrid();renderCompare();renderSelBar();
-
-    // 暴露给全局 onclick
-    window.backToQuery=backToQuery;
   })();
   </script>
 </body>
