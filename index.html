@@ -272,7 +272,9 @@
     function renderSelBar(){
       const bar=document.getElementById("selBar");
       if(!bar)return;
-      if(compare.length===0){bar.style.display="none";return;}
+      // 对比页内不显示底部选车栏（开始对比按钮）；
+      // 仅在「单车查询」页且已选车时显示
+      if(compare.length===0 || inCompare){bar.style.display="none";return;}
       bar.style.display="flex";
       bar.querySelector(".sel-count").textContent=compare.length;
       document.getElementById("goCmpBtn").disabled=compare.length<2;
@@ -308,7 +310,10 @@
       if(compare.length<2) return;
       inCompare = true;
       showView("compare");
-      history.pushState({view:"compare"}, "");
+      // 避免历史栈里残留 compare 记录导致返回键行为错乱；仅当顶层不是 compare 时才压栈
+      if(!history.state || history.state.view!=="compare"){
+        history.pushState({view:"compare"}, "");
+      }
     }
     function backToQuery(){
       // 用浏览器返回，触发 popstate，与手机/桌面返回键行为一致
@@ -353,7 +358,7 @@
       // 参数表
       const body=document.getElementById("cmpBody");
       const diffOnly=document.getElementById("diffOnly").checked;
-      if(compare.length<2){body.innerHTML='<div class="empty">请至少选择 2 款车型进行对比。</div>';return;}
+      if(compare.length===0){body.innerHTML='<div class="empty">请至少选择 2 款车型进行对比。</div>';return;}
       const cars=compare.map(n=>DATA.find(d=>d["车型"]===n)).filter(Boolean);
 
       let html='<div class="ctable-wrap"><table class="ctable"><thead><tr><th></th>';
@@ -363,13 +368,16 @@
       FIELDS.forEach(f=>{
         const vals=cars.map(c=>c[f]);
         const allSame=vals.every((v,i)=>v===vals[0]||(v==null&&vals[0]==null));
-        if(diffOnly&&allSame)return;
+        // 仅剩 1 款时所有行都相同，diffOnly 下会全部隐藏 → 单辆时忽略 diffOnly
+        if(diffOnly&&allSame&&compare.length>=2)return;
         let bestIdx=-1;
-        if(f==="适睡推荐"){let b=-2;vals.forEach((v,i)=>{const r=starRank(v);if(r>b){b=r;bestIdx=i;}});}
-        else if(["后备箱可睡长度","车身长度","车身宽度","车身高度"].includes(f)){
-          let b=-1;vals.forEach((v,i)=>{const n=numOf(v);if(n!=null&&n>b){b=n;bestIdx=i;}});
-        }else if(f==="后备箱倾斜角"){
-          let b=1e9;vals.forEach((v,i)=>{const n=numOf(v);if(n!=null&&n<b){b=n;bestIdx=i;}});
+        if(compare.length>=2){
+          if(f==="适睡推荐"){let b=-2;vals.forEach((v,i)=>{const r=starRank(v);if(r>b){b=r;bestIdx=i;}});}
+          else if(["后备箱可睡长度","车身长度","车身宽度","车身高度"].includes(f)){
+            let b=-1;vals.forEach((v,i)=>{const n=numOf(v);if(n!=null&&n>b){b=n;bestIdx=i;}});
+          }else if(f==="后备箱倾斜角"){
+            let b=1e9;vals.forEach((v,i)=>{const n=numOf(v);if(n!=null&&n<b){b=n;bestIdx=i;}});
+          }
         }
         html+=`<tr><th>${f}</th>`;
         vals.forEach((v,i)=>{
@@ -385,12 +393,15 @@
       body.innerHTML=html;
     }
 
-    // tab 切换（接入历史）
+    // tab 切换：复用既有「进入对比 / 返回查询」逻辑，保持与返回键行为一致（历史栈同步）
     document.querySelectorAll(".tab").forEach(t=>{
       t.onclick=()=>{
         const v=t.dataset.view;
-        if(history.state && history.state.view===v){ showView(v); return; }
-        navigate(v, true);
+        if(v==="compare"){
+          if(!inCompare) goComparePage();      // 进入多车对比（含 pushState）
+        } else { // query
+          if(inCompare) backToQuery();         // 返回单车查询（history.back，与返回键一致）
+        }
       };
     });
 
