@@ -183,10 +183,20 @@
     const FIELDS = window.SLEEP_CAR_FIELDS || [];
     const compare = [];
 
-    function numOf(v){
+    function numOf(v, field){
       if(v==null) return null;
-      const m=String(v).match(/-?\d+(\.\d+)?/);
-      return m?parseFloat(m[0]):null;
+      // Only unambiguous scalar measurements are comparable. Descriptions,
+      // ranges and seat ratios must not become measurements.
+      const m=String(v).trim().match(/^(\d+(?:\.\d+)?)\s*(mm|cm|m|毫米|厘米|米|度|°)?$/i);
+      if(!m) return null;
+      const n=Number(m[1]), unit=(m[2]||'').toLowerCase();
+      if(field==='后备箱可睡长度'){
+        if(unit==='m'||unit==='米') return n*100;
+        if(unit==='mm'||unit==='毫米') return n/10;
+        if(unit==='cm'||unit==='厘米') return n;
+        return null; // A bare number has no reliable length unit.
+      }
+      return n;
     }
     function starRank(v){
       if(v==null) return -1;
@@ -371,12 +381,12 @@
         // 仅剩 1 款时所有行都相同，diffOnly 下会全部隐藏 → 单辆时忽略 diffOnly
         if(diffOnly&&allSame&&compare.length>=2)return;
         let bestIdx=-1;
-        if(compare.length>=2){
+        if(compare.length>=2 && vals.every(v=>f==='适睡推荐'?starRank(v)>0:numOf(v,f)!=null)){
           if(f==="适睡推荐"){let b=-2;vals.forEach((v,i)=>{const r=starRank(v);if(r>b){b=r;bestIdx=i;}});}
           else if(["后备箱可睡长度","车身长度","车身宽度","车身高度"].includes(f)){
-            let b=-1;vals.forEach((v,i)=>{const n=numOf(v);if(n!=null&&n>b){b=n;bestIdx=i;}});
+            let b=-1;vals.forEach((v,i)=>{const n=numOf(v,f);if(n!=null&&n>b){b=n;bestIdx=i;}});
           }else if(f==="后备箱倾斜角"){
-            let b=1e9;vals.forEach((v,i)=>{const n=numOf(v);if(n!=null&&n<b){b=n;bestIdx=i;}});
+            let b=1e9;vals.forEach((v,i)=>{const n=numOf(v,f);if(n!=null&&n<b){b=n;bestIdx=i;}});
           }
         }
         html+=`<tr><th>${f}</th>`;
