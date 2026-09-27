@@ -208,6 +208,18 @@
       return map[ch]!==undefined?map[ch]:parseInt(ch,10);
     }
 
+    function comparisonRanks(vals, field){
+      if(field==='适睡推荐') return vals.map(v=>starRank(v)>0?starRank(v):null);
+      if(['后备箱可睡长度','车身长度','车身宽度','车身高度','后备箱倾斜角'].includes(field)) return vals.map(v=>numOf(v,field));
+      return vals.map(()=>null);
+    }
+    function resetFilters(){
+      document.getElementById('q').value='';
+      document.getElementById('fBrand').value='';
+      document.getElementById('fStar').value='';
+      renderGrid();
+    }
+
     // 排序：按品牌分组
     const brands=[...new Set(DATA.map(d=>d["品牌"]).filter(Boolean))].sort();
     const stars=[...new Set(DATA.map(d=>d["适睡推荐"]).filter(Boolean))].sort((a,b)=>starRank(a)-starRank(b));
@@ -311,9 +323,7 @@
       document.getElementById("selBar").style.display = (view==="query")?((compare.length>0)?"flex":"none"):"none";
       if(view==="compare") renderCompare();
       if(view==="query"){
-        // 回到单车查询即重置为「全部品牌」主界面
-        const fb=document.getElementById("fBrand");
-        if(fb.value!==""){ fb.value=""; renderGrid(); }
+        resetFilters();
       }
     }
     function goComparePage(){
@@ -377,23 +387,18 @@
 
       FIELDS.forEach(f=>{
         const vals=cars.map(c=>c[f]);
-        const allSame=vals.every((v,i)=>v===vals[0]||(v==null&&vals[0]==null));
+        const ranks=comparisonRanks(vals,f);
+        const comparable=ranks.every(n=>n!=null);
+        const allSame=vals.every(v=>v===vals[0]||(v==null&&vals[0]==null)) || (comparable&&ranks.every(n=>n===ranks[0]));
         // 仅剩 1 款时所有行都相同，diffOnly 下会全部隐藏 → 单辆时忽略 diffOnly
         if(diffOnly&&allSame&&compare.length>=2)return;
-        let bestIdx=-1;
-        if(compare.length>=2 && vals.every(v=>f==='适睡推荐'?starRank(v)>0:numOf(v,f)!=null)){
-          if(f==="适睡推荐"){let b=-2;vals.forEach((v,i)=>{const r=starRank(v);if(r>b){b=r;bestIdx=i;}});}
-          else if(["后备箱可睡长度","车身长度","车身宽度","车身高度"].includes(f)){
-            let b=-1;vals.forEach((v,i)=>{const n=numOf(v,f);if(n!=null&&n>b){b=n;bestIdx=i;}});
-          }else if(f==="后备箱倾斜角"){
-            let b=1e9;vals.forEach((v,i)=>{const n=numOf(v,f);if(n!=null&&n<b){b=n;bestIdx=i;}});
-          }
-        }
+        const best=compare.length>=2&&!allSame&&comparable
+          ? (f==='后备箱倾斜角'?Math.min(...ranks):Math.max(...ranks)) : null;
         html+=`<tr><th>${f}</th>`;
         vals.forEach((v,i)=>{
           const cls=[];
           // 排除 "-" 值不被标为最佳
-          if(i===bestIdx && v!==null && v!=="" && String(v).trim()!=="-")cls.push("best");
+          if(best!=null && ranks[i]===best)cls.push("best");
           if(!allSame)cls.push("diff");
           html+=`<td class="${cls.join(' ')}">${v==null||v===""?"—":v}</td>`;
         });
@@ -417,7 +422,14 @@
 
     document.getElementById("q").oninput=renderGrid;
     // 品牌切换仅作局部筛选，不写入历史栈（避免返回键逐个回退品牌）
-    document.getElementById("fBrand").onchange=()=>{ renderGrid(); };
+    document.getElementById("fBrand").onchange=()=>{
+      if(document.getElementById('fBrand').value==='') resetFilters();
+      else renderGrid();
+    };
+    // Native selects may not emit change when the already-selected option is clicked.
+    document.getElementById('fBrand').onclick=()=>{
+      if(document.getElementById('fBrand').value==='') resetFilters();
+    };
     document.getElementById("fStar").onchange=renderGrid;
     document.getElementById("diffOnly").onchange=renderCompare;
 
