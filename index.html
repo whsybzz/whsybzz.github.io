@@ -393,8 +393,10 @@
         const allSame=vals.every(v=>v===vals[0]||(v==null&&vals[0]==null)) || (comparable&&ranks.every(n=>n===ranks[0]));
         // 仅剩 1 款时所有行都相同，diffOnly 下会全部隐藏 → 单辆时忽略 diffOnly
         if(diffOnly&&allSame&&compare.length>=2)return;
-        const best=compare.length>=2&&!allSame&&comparable
-          ? (f==='后备箱倾斜角'?Math.min(...ranks):Math.max(...ranks)) : null;
+        const knownRanks=ranks.filter(n=>n!=null);
+        const hasDifference=knownRanks.length>=2&&knownRanks.some(n=>n!==knownRanks[0]);
+        const best=hasDifference
+          ? (f==='后备箱倾斜角'?Math.min(...knownRanks):Math.max(...knownRanks)) : null;
         html+=`<tr><th>${f}</th>`;
         vals.forEach((v,i)=>{
           const cls=[];
