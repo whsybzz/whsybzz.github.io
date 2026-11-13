@@ -190,13 +190,17 @@
       const m=String(v).trim().match(/^(\d+(?:\.\d+)?)\s*(mm|cm|m|毫米|厘米|米|度|°)?$/i);
       if(!m) return null;
       const n=Number(m[1]), unit=(m[2]||'').toLowerCase();
-      if(field==='后备箱可睡长度'){
-        if(unit==='m'||unit==='米') return n*100;
-        if(unit==='mm'||unit==='毫米') return n/10;
-        if(unit==='cm'||unit==='厘米') return n;
-        return null; // A bare number has no reliable length unit.
-      }
-      return n;
+      if(!Number.isFinite(n)) return null;
+      if(field==='后备箱倾斜角') return ['', '度', '°'].includes(unit)?n:null;
+      const body=['车身长度','车身宽度','车身高度'].includes(field);
+      if(!body&&field!=='后备箱可睡长度') return null;
+      // Body dimensions default to mm; bed lengths require an explicit unit.
+      const toMm={'mm':1,'毫米':1,'cm':10,'厘米':10,'m':1000,'米':1000};
+      const scale=unit?toMm[unit]:(body?1:undefined);
+      if(scale===undefined) return null;
+      const normalized=n*scale/(body?1:10);
+      // Equivalent decimal measurements should tie after unit conversion.
+      return Number.isFinite(normalized)?Number(normalized.toPrecision(15)):null;
     }
     function starRank(v){
       if(v==null) return -1;
